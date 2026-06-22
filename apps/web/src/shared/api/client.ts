@@ -1,6 +1,6 @@
 import type { ApiResponse, ContextIngestionRequest, ContextIngestionResult } from "@se-plus/shared";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8787";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? localApiBaseUrl();
 
 export async function ingestContext(
   request: ContextIngestionRequest,
@@ -20,10 +20,19 @@ export async function ingestContext(
       ok: false,
       error: {
         code: "network_error",
-        message: "The API could not be reached. Check that the Worker is running.",
+        message: import.meta.env.VITE_API_BASE_URL
+          ? "The API could not be reached. Check that the Worker is running."
+          : "The API URL is not configured. Set VITE_API_BASE_URL in Cloudflare Pages and redeploy.",
         details: error instanceof Error ? error.message : error,
       },
     };
   }
 }
 
+function localApiBaseUrl(): string {
+  if (import.meta.env.DEV) {
+    return "http://localhost:8787";
+  }
+
+  return "";
+}
