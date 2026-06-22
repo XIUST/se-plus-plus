@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "workers/*"
+  - "shared"
+
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - workerd
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true

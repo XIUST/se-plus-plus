@@ -1,0 +1,13 @@
+{
+  "name": "se-plus-plus",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev:web": "pnpm --filter @se-plus/web dev",
+    "dev:api": "pnpm --filter @se-plus/api dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@11.5.3"
+}
