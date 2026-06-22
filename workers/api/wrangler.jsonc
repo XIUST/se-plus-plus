@@ -16,6 +16,6 @@
 		}
 	],
 	"vars": {
-		"ALLOWED_ORIGIN": "se-plus-plus.pages.dev"
+		"ALLOWED_ORIGIN": "https://se-plus-plus.pages.dev"
 	}
 }
