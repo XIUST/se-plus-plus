@@ -1,4 +1,6 @@
 import { routeContextRequest } from "./routes/contextRoutes";
+import { routeTopicList, routeTopicDelete } from "./routes/topicRoutes";
+import { routeFlashcardGeneration, routeFlashcardEvaluation } from "./routes/flashcardRoutes";
 import type { Env } from "./env";
 
 export default {
@@ -15,6 +17,22 @@ export default {
 
     if (url.pathname === "/api/contexts") {
       return withCors(await routeContextRequest(request, env, ctx), env);
+    }
+
+    if (url.pathname === "/api/topics" && request.method === "GET") {
+      return withCors(await routeTopicList(request, env), env);
+    }
+
+    if (url.pathname === "/api/topics" && request.method === "DELETE") {
+      return withCors(await routeTopicDelete(request, env), env);
+    }
+
+    if (url.pathname === "/api/flashcards/generate") {
+      return withCors(await routeFlashcardGeneration(request, env), env);
+    }
+
+    if (url.pathname === "/api/flashcards/evaluate") {
+      return withCors(await routeFlashcardEvaluation(request, env), env);
     }
 
     return withCors(

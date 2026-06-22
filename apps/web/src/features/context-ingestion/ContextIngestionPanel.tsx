@@ -1,175 +1,221 @@
-import { useMemo, useState } from "react";
+import { useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import type { ContextIngestionResult, StudySourceKind } from "@se-plus/shared";
 import { ingestContext } from "../../shared/api/client";
-
-type Status =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "success"; result: ContextIngestionResult }
-  | { kind: "error"; message: string };
-
-const sampleText =
-  "Paste lecture notes, textbook excerpts, or markdown here. Se++ will split the material into study-sized chunks and store semantic embeddings for later flashcard generation.";
 
 export function ContextIngestionPanel() {
   const [topic, setTopic] = useState("");
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<StudySourceKind>("markdown");
-  const [content, setContent] = useState(sampleText);
-  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [content, setContent] = useState("");
+  
+  type Status = 
+    | { type: "idle" } 
+    | { type: "loading" } 
+    | { type: "success"; data: ContextIngestionResult } 
+    | { type: "error"; message: string };
 
-  const characterCount = content.trim().length;
-  const canSubmit = topic.trim().length > 0 && characterCount >= 20 && status.kind !== "loading";
+  const [status, setStatus] = useState<Status>({ type: "idle" });
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const result = status.kind === "success" ? status.result : undefined;
-  const statusMessage = useMemo(() => {
-    if (status.kind === "loading") {
-      return "Embedding study context...";
-    }
+  const isValid = topic.trim().length > 0 && content.trim().length >= 20;
 
-    if (status.kind === "success") {
-      return "Context is ready for retrieval.";
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isValid) return;
 
-    if (status.kind === "error") {
-      return status.message;
-    }
+    setStatus({ type: "loading" });
 
-    return "Waiting for study material.";
-  }, [status]);
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!canSubmit) {
-      return;
-    }
-
-    setStatus({ kind: "loading" });
-
-    const trimmedTitle = title.trim();
     const response = await ingestContext({
       topic: topic.trim(),
-      ...(trimmedTitle ? { title: trimmedTitle } : {}),
+      ...(title.trim() ? { title: title.trim() } : {}),
       kind,
       content: content.trim(),
     });
 
     if (response.ok) {
-      setStatus({ kind: "success", result: response.data });
-      return;
+      setStatus({ type: "success", data: response.data });
+      setTopic("");
+      setTitle("");
+      setContent("");
+    } else {
+      setStatus({ type: "error", message: response.error.message });
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
+    if (!file) return;
+    
+    if (!title) {
+      setTitle(file.name);
+    }
+    
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'md' || ext === 'markdown') {
+      setKind("markdown");
+    } else {
+      setKind("text");
     }
 
-    setStatus({ kind: "error", message: response.error.message });
-  }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (text) setContent(text);
+    };
+    reader.readAsText(file);
+  };
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
 
-    if (!file) {
-      return;
+  const onDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
     }
-
-    const text = await file.text();
-    setContent(text);
-    setTitle((current) => current || file.name.replace(/\.(md|markdown|txt)$/i, ""));
-    setKind(file.name.match(/\.md|\.markdown/i) ? "markdown" : "text");
-  }
+  };
 
   return (
-    <div className="ingestion-layout">
-      <form className="form-panel" onSubmit={handleSubmit}>
-        <div className="field-grid">
-          <div className="field">
-            <label htmlFor="topic">Topic</label>
-            <input
-              id="topic"
-              maxLength={120}
-              onChange={(event) => setTopic(event.target.value)}
-              placeholder="e.g. Cellular respiration"
-              value={topic}
-            />
+    <div className="ingestion-page">
+      <div className="ingestion-card">
+        <h2 style={{ marginBottom: '2rem' }}>Ingest Study Material</h2>
+        
+        {status.type === "error" && (
+          <div className="notice error">{status.message}</div>
+        )}
+
+        {status.type === "success" && (
+          <div className="ingestion-result">
+            <h3 style={{ color: "var(--success-color)", marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              Material Ingested Successfully
+            </h3>
+            <p><strong>Topic:</strong> {status.data.topic}</p>
+            <p><strong>Chunks generated:</strong> {status.data.chunkCount}</p>
+            <div style={{ marginTop: '1.5rem' }}>
+              <Link to="/" className="btn-primary">Return to Dashboard</Link>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: status.type === 'success' ? 'none' : 'block' }}>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="topic">Topic (Required)</label>
+              <input
+                id="topic"
+                type="text"
+                className="form-input"
+                placeholder="e.g. Cellular Biology"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                disabled={status.type === "loading"}
+                maxLength={120}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="kind">Format</label>
+              <select
+                id="kind"
+                className="form-select"
+                value={kind}
+                onChange={(e) => setKind(e.target.value as StudySourceKind)}
+                disabled={status.type === "loading"}
+              >
+                <option value="markdown">Markdown</option>
+                <option value="text">Plain Text</option>
+                <option value="topic">Topic Outline</option>
+              </select>
+            </div>
           </div>
 
-          <div className="field">
-            <label htmlFor="title">Source title</label>
+          <div className="form-group">
+            <label className="form-label" htmlFor="title">Source Title (Optional)</label>
             <input
               id="title"
-              maxLength={160}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Optional"
+              type="text"
+              className="form-input"
+              placeholder="e.g. Chapter 4 Notes"
               value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              disabled={status.type === "loading"}
+              maxLength={160}
             />
           </div>
-        </div>
 
-        <div className="field">
-          <label htmlFor="kind">Source type</label>
-          <select
-            id="kind"
-            onChange={(event) => setKind(event.target.value as StudySourceKind)}
-            value={kind}
-          >
-            <option value="markdown">Markdown notes</option>
-            <option value="text">Plain text</option>
-            <option value="topic">Topic outline</option>
-          </select>
-        </div>
-
-        <div className="file-row">
-          <span className="upload-label">Upload notes</span>
-          <input accept=".md,.markdown,.txt,text/markdown,text/plain" onChange={handleFileChange} type="file" />
-        </div>
-
-        <div className="field">
-          <label htmlFor="content">Study material</label>
-          <textarea
-            id="content"
-            onChange={(event) => setContent(event.target.value)}
-            value={content}
-          />
-          <p className="hint">{characterCount.toLocaleString()} characters. Minimum 20 characters.</p>
-        </div>
-
-        <div className="actions">
-          <button className="primary-button" disabled={!canSubmit} type="submit">
-            {status.kind === "loading" ? "Processing..." : "Generate embeddings"}
-          </button>
-          <button className="secondary-button" onClick={() => setContent("")} type="button">
-            Clear text
-          </button>
-        </div>
-      </form>
-
-      <aside className="result-panel" aria-live="polite">
-        <p className="panel-label">Ingestion result</p>
-        <h2>{statusMessage}</h2>
-
-        <dl className="metric-list">
-          <div className="metric-row">
-            <dt>Topic</dt>
-            <dd>{result?.topic ?? "None"}</dd>
+          <div className="form-group">
+            <label className="form-label">Upload File</label>
+            <div 
+              className={`file-drop-zone ${isDragOver ? 'dragover' : ''}`}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <p style={{ margin: 0 }}>Drag and drop a .txt or .md file here, or click to browse</p>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept=".txt,.md,.markdown"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);
+                }}
+              />
+            </div>
           </div>
-          <div className="metric-row">
-            <dt>Source</dt>
-            <dd>{result?.title ?? "Not ingested"}</dd>
-          </div>
-          <div className="metric-row">
-            <dt>Chunks</dt>
-            <dd>{result?.chunkCount ?? 0}</dd>
-          </div>
-          <div className="metric-row">
-            <dt>Source ID</dt>
-            <dd>{result?.sourceId ?? "-"}</dd>
-          </div>
-        </dl>
 
-        {status.kind === "success" ? (
-          <p className="notice success">The Worker stored vectors for this source. Flashcard generation can retrieve this context next.</p>
-        ) : null}
+          <div className="form-group">
+            <label className="form-label" htmlFor="content">Study Material</label>
+            <textarea
+              id="content"
+              className="form-textarea"
+              placeholder="Paste your study notes here..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              disabled={status.type === "loading"}
+            />
+            <span className="char-count">{content.length} characters (min 20)</span>
+          </div>
 
-        {status.kind === "error" ? <p className="notice error">{status.message}</p> : null}
-      </aside>
+          {status.type === "loading" && (
+            <div className="ingestion-progress">
+              <div className="ingestion-progress-bar"></div>
+            </div>
+          )}
+
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={!isValid || status.type === "loading"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              {status.type === "loading" ? "Processing & Embedding..." : "Generate Embeddings"}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setContent("")}
+              disabled={content.length === 0 || status.type === "loading"}
+            >
+              Clear Text
+            </button>
+          </div>
+
+        </form>
+      </div>
     </div>
   );
 }

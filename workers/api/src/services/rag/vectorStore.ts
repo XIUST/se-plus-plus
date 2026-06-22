@@ -41,3 +41,39 @@ function readMutationId(value: unknown): string | undefined {
   const record = value as Record<string, unknown>;
   return typeof record.mutationId === "string" ? record.mutationId : undefined;
 }
+
+export async function queryContextVectors(
+  vectorize: Vectorize,
+  queryEmbedding: number[],
+  topic: string,
+  topK: number = 5,
+): Promise<{ id: string; content: string; score: number }[]> {
+  const queryResult = await vectorize.query(queryEmbedding, { topK, filter: { topic }, returnMetadata: 'all' });
+  const results: { id: string; content: string; score: number }[] = [];
+
+  for (const match of queryResult.matches) {
+    const content = typeof match.metadata?.content === "string" ? match.metadata.content : "";
+    if (content) {
+      results.push({ id: match.id, content, score: match.score });
+    }
+  }
+
+  return results;
+}
+
+export async function deleteContextVectors(
+  vectorize: Vectorize,
+  topic: string,
+): Promise<{ deletedCount: number }> {
+  const dummyEmbedding = new Array(768).fill(0);
+  const queryResult = await vectorize.query(dummyEmbedding, { topK: 1000, filter: { topic }, returnMetadata: 'none' });
+
+  const idsToDelete = queryResult.matches.map((match) => match.id);
+
+  if (idsToDelete.length === 0) {
+    return { deletedCount: 0 };
+  }
+
+  await vectorize.deleteByIds(idsToDelete);
+  return { deletedCount: idsToDelete.length };
+}

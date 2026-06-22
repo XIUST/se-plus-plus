@@ -12,7 +12,8 @@
   "dependencies": {
     "@se-plus/shared": "workspace:*",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "react-router-dom": "^7.18.0"
   },
   "devDependencies": {
     "@types/react": "latest",
