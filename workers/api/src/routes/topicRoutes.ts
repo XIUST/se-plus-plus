@@ -10,7 +10,8 @@ export async function routeTopicList(
     // Use a unit vector (length 1) to avoid divide-by-zero errors in cosine similarity
     const dummyEmbedding = new Array(768).fill(0);
     dummyEmbedding[0] = 1;
-    const queryResult = await env.VECTORIZE.query(dummyEmbedding, { topK: 1000, returnMetadata: 'all' });
+    // Vectorize API max topK is currently 100.
+    const queryResult = await env.VECTORIZE.query(dummyEmbedding, { topK: 100, returnMetadata: 'all' });
 
     const topicMap = new Map<string, { sourceIds: Set<string>, chunkCount: number, latestDate: string }>();
 
