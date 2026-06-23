@@ -19,6 +19,7 @@ export function StudySession() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [startTime, setStartTime] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [isNotReady, setIsNotReady] = useState(false);
 
   useEffect(() => {
     if (!topic) return;
@@ -28,12 +29,14 @@ export function StudySession() {
   const loadCards = async () => {
     setPhase('loading');
     setError(null);
+    setIsNotReady(false);
     const res = await generateFlashcards({ topic: topic!, count: 10 });
     if (res.ok) {
       setCards(res.data.cards);
       setStartTime(Date.now());
       setPhase('answering');
     } else {
+      setIsNotReady(res.error.code === "no_content");
       setError(res.error.message);
     }
   };
@@ -122,7 +125,16 @@ export function StudySession() {
   if (error) {
     return (
       <div className="study-page">
-        <div className="notice error">{error}</div>
+        <div className={`notice ${isNotReady ? 'info' : 'error'}`}>
+          {isNotReady ? (
+            <>
+              <strong>{topic}</strong> is still being prepared. Your notes were uploaded, but the vector index needs a minute or two to make them searchable. Please try again shortly.
+            </>
+          ) : error}
+        </div>
+        {isNotReady && (
+          <button className="btn-primary" onClick={loadCards} style={{ marginBottom: '0.75rem' }}>Try again</button>
+        )}
         <button className="btn-secondary" onClick={() => navigate('/')}>Back to Dashboard</button>
       </div>
     );
