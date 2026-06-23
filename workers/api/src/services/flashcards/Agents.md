@@ -9,6 +9,7 @@ Exports:
 
 Rules:
 - Use `@cf/meta/llama-3.1-8b-instruct` for language model tasks.
-- Return structured JSON and parse it carefully using `extractJson`.
-- Retry once with a lower temperature if parsing fails.
+- Prefer Workers AI JSON mode with `response_format: { type: "json_schema", json_schema: ... }` to get structured output.
+- Fall back to `extractJson` if the model returns plain text instead of a parsed schema result.
+- Retry once with a lower temperature if parsing or schema validation fails.
 - Throw on persistent failures so the route can return a typed error instead of silently falling back.

@@ -1,6 +1,25 @@
 import type { Flashcard } from "@se-plus/shared";
 import { extractJson } from "./jsonExtraction";
 
+const FLASHCARDS_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    cards: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          question: { type: "string" },
+          expectedAnswer: { type: "string" },
+          difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
+        },
+        required: ["question", "expectedAnswer", "difficulty"],
+      },
+    },
+  },
+  required: ["cards"],
+};
+
 export async function generateFlashcardsFromContext(
   ai: Ai,
   contextChunks: { content: string; id: string }[],
@@ -9,37 +28,53 @@ export async function generateFlashcardsFromContext(
 ): Promise<Flashcard[]> {
   const systemPrompt = `You are an expert study assistant. Generate exactly ${count} flashcard questions and answers based ONLY on the provided study material.
 
-Return a single valid JSON array and nothing else. Do not include markdown formatting, explanations, or trailing text.
+Return a single valid JSON object and nothing else. Do not include markdown formatting, explanations, or trailing text.
 
 Expected format:
-[
-  { "question": "What is the role of mitochondria?", "expectedAnswer": "Mitochondria generate ATP, the cell's main energy currency.", "difficulty": "easy" }
-]`;
+{
+  "cards": [
+    { "question": "What is the role of mitochondria?", "expectedAnswer": "Mitochondria generate ATP, the cell's main energy currency.", "difficulty": "easy" }
+  ]
+}`;
 
-  const contextText = contextChunks.map((c, i) => `[Chunk ${i+1}]\n${c.content}`).join("\n\n");
-  const userPrompt = `Study Material:\n${contextText}\n\nGenerate ${count} flashcards as a JSON array.`;
+  const contextText = contextChunks.map((c, i) => `[Chunk ${i + 1}]\n${c.content}`).join("\n\n");
+  const userPrompt = `Study Material:\n${contextText}\n\nGenerate ${count} flashcards inside a "cards" JSON array.`;
 
   async function attempt(temperature: number): Promise<Flashcard[] | undefined> {
-    const response = await ai.run("@cf/meta/llama-3.1-8b-instruct", {
+    const response = (await ai.run("@cf/meta/llama-3.1-8b-instruct", {
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
+        { role: "user", content: userPrompt },
       ],
       temperature,
-      max_tokens: 4096
-    }) as { response: string };
+      max_tokens: 4096,
+      response_format: {
+        type: "json_schema",
+        json_schema: FLASHCARDS_JSON_SCHEMA,
+      },
+    })) as { response: unknown };
 
-    const raw = response.response;
-    const parsed = extractJson<unknown[]>(raw);
+    const output = response.response;
 
-    if (!Array.isArray(parsed)) {
-      console.error("Flashcard generation did not return a JSON array.", raw);
+    let parsedCards: unknown[] | undefined;
+    if (isObject(output) && Array.isArray(output.cards)) {
+      parsedCards = output.cards;
+    } else {
+      const raw = typeof output === "string" ? output : JSON.stringify(output);
+      const extracted = extractJson<unknown[]>(raw);
+      if (Array.isArray(extracted)) {
+        parsedCards = extracted;
+      }
+    }
+
+    if (!Array.isArray(parsedCards)) {
+      console.error("Flashcard generation did not return a JSON array.", output);
       return undefined;
     }
 
-    const chunkIds = contextChunks.map(c => c.id);
+    const chunkIds = contextChunks.map((c) => c.id);
 
-    return parsed.slice(0, count).map((item: any) => ({
+    return parsedCards.slice(0, count).map((item: any) => ({
       id: crypto.randomUUID(),
       question: item.question || "Unknown question",
       expectedAnswer: item.expectedAnswer || "Unknown answer",
@@ -60,4 +95,8 @@ Expected format:
   }
 
   throw new Error("Flashcard generation failed after retry.");
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
