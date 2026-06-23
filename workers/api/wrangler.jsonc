@@ -12,7 +12,13 @@
 	"vectorize": [
 		{
 			"binding": "VECTORIZE",
-			"index_name": "se-plus-study-context"
+			"index_name": "se-plus-study-context-v2"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "TOPICS_KV",
+			"id": "79882fd4404a425db6cb8b8eeb3fbb3a"
 		}
 	],
 	"vars": {

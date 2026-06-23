@@ -4,6 +4,7 @@ import type { Env } from "../env";
 import { createEmbeddings } from "../services/embeddings/embeddings";
 import { chunkStudySource } from "../services/ingestion/chunkText";
 import { insertContextVectors } from "../services/rag/vectorStore";
+import { recordTopicIngestion } from "../services/topics/topicCatalog";
 
 export async function routeContextRequest(
   request: Request,
@@ -52,7 +53,11 @@ export async function routeContextRequest(
     ...(vectorMutation.mutationId ? { vectorMutationId: vectorMutation.mutationId } : {}),
   };
 
-  ctx.waitUntil(Promise.resolve());
+  try {
+    await recordTopicIngestion(env.TOPICS_KV, result.topic, result.sourceId, result.chunkCount);
+  } catch (error) {
+    console.error("Failed to update topic catalog", error);
+  }
 
   return json<ApiResponse<ContextIngestionResult>>({ ok: true, data: result }, 201);
 }

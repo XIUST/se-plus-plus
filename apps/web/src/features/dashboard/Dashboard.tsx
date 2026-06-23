@@ -42,7 +42,7 @@ export function Dashboard() {
   const handleDelete = async (topic: string) => {
     const result = await deleteTopic(topic);
     if (result.ok) {
-      setTopics((prev) => prev.filter((t) => t.topic !== topic));
+      await loadTopics();
     } else {
       alert(`Failed to delete topic: ${result.error.message}`);
     }

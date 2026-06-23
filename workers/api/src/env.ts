@@ -7,6 +7,7 @@ export type EmbeddingResponse = {
 export interface Env {
   AI: Ai;
   VECTORIZE: Vectorize;
+  TOPICS_KV: KVNamespace;
   ALLOWED_ORIGIN?: string;
 }
 

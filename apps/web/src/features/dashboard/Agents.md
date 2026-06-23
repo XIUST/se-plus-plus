@@ -1,11 +1,12 @@
 # Dashboard Feature
 
-Purpose: Future dashboard for study topics, progress, and weak spot summaries.
+Purpose: Displays study topics, basic stats, and actions to study or delete a topic.
 
 Exports:
-- None yet.
+- `Dashboard` React component.
 
 Rules:
 - Keep progress visualization here, not inside the ingestion or flashcard modules.
 - Use English UI labels only.
+- Refetch the topic list after a successful deletion to keep the catalog view in sync.
 

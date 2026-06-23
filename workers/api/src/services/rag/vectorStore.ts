@@ -64,27 +64,42 @@ export async function queryContextVectors(
 export async function deleteContextVectors(
   vectorize: Vectorize,
   topic: string,
-): Promise<{ deletedCount: number }> {
+): Promise<{ deletedCount: number; mutationId?: string }> {
   // Use a unit vector to avoid divide-by-zero in cosine similarity
   const dummyEmbedding = new Array(768).fill(0);
   dummyEmbedding[0] = 1;
 
   let deletedCount = 0;
-  while (true) {
+  let mutationId: string | undefined;
+  const seen = new Set<string>();
+  const MAX_PAGES = 200;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
     const queryResult = await vectorize.query(dummyEmbedding, {
       topK: 100,
       filter: { topic },
       returnMetadata: 'none',
     });
 
-    const idsToDelete = queryResult.matches.map((match) => match.id);
+    const idsToDelete = queryResult.matches
+      .map((match) => match.id)
+      .filter((id) => !seen.has(id));
+
     if (idsToDelete.length === 0) {
       break;
     }
 
-    await vectorize.deleteByIds(idsToDelete);
+    for (const id of idsToDelete) {
+      seen.add(id);
+    }
+
+    const deletion = await vectorize.deleteByIds(idsToDelete);
+    mutationId = readMutationId(deletion) ?? mutationId;
     deletedCount += idsToDelete.length;
   }
 
-  return { deletedCount };
+  return {
+    deletedCount,
+    ...(mutationId ? { mutationId } : {}),
+  };
 }
