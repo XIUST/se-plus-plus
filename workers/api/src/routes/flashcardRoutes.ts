@@ -44,9 +44,10 @@ export async function routeFlashcardGeneration(
     return json<ApiResponse<GenerateFlashcardsResponse>>({ ok: true, data: { cards: flashcards } });
 
   } catch (error: any) {
+    const code = error?.message?.toLowerCase().includes("flashcard generation") ? "generation_failed" : "internal_error";
     return json<ApiResponse<never>>({
       ok: false,
-      error: { code: "internal_error", message: "Failed to generate flashcards", details: error.message }
+      error: { code, message: "Failed to generate flashcards", details: error.message }
     }, 500);
   }
 }
@@ -76,9 +77,10 @@ export async function routeFlashcardEvaluation(
     return json<ApiResponse<AnswerEvaluationResult>>({ ok: true, data: evaluation });
 
   } catch (error: any) {
+    const code = error?.message?.toLowerCase().includes("answer evaluation") ? "evaluation_failed" : "internal_error";
     return json<ApiResponse<never>>({
       ok: false,
-      error: { code: "internal_error", message: "Failed to evaluate answer", details: error.message }
+      error: { code, message: "Failed to evaluate answer", details: error.message }
     }, 500);
   }
 }

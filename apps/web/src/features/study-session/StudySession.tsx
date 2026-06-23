@@ -8,17 +8,17 @@ import { VoiceInput } from "../../components/voice-input/VoiceInput";
 export function StudySession() {
   const { topic } = useParams<{ topic: string }>();
   const navigate = useNavigate();
-  
+
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [evaluation, setEvaluation] = useState<AnswerEvaluationResult | null>(null);
   const [results, setResults] = useState<{ flashcard: Flashcard; evaluation: AnswerEvaluationResult }[]>([]);
-  
+
   const [phase, setPhase] = useState<'loading' | 'answering' | 'evaluating' | 'reviewed'>('loading');
-  const [isFlipped, setIsFlipped] = useState(false);
   const [startTime, setStartTime] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [isNotReady, setIsNotReady] = useState(false);
 
   useEffect(() => {
@@ -29,7 +29,10 @@ export function StudySession() {
   const loadCards = async () => {
     setPhase('loading');
     setError(null);
+    setErrorCode(null);
     setIsNotReady(false);
+    setEvaluation(null);
+
     const res = await generateFlashcards({ topic: topic!, count: 10 });
     if (res.ok) {
       setCards(res.data.cards);
@@ -37,6 +40,7 @@ export function StudySession() {
       setPhase('answering');
     } else {
       setIsNotReady(res.error.code === "no_content");
+      setErrorCode(res.error.code ?? null);
       setError(res.error.message);
     }
   };
@@ -48,7 +52,9 @@ export function StudySession() {
   const handleSubmit = async () => {
     if (!userAnswer.trim()) return;
     setPhase('evaluating');
-    
+    setError(null);
+    setErrorCode(null);
+
     const card = cards[currentIndex];
     if (!card) return;
 
@@ -62,25 +68,35 @@ export function StudySession() {
 
     if (res.ok) {
       setEvaluation(res.data);
-      setIsFlipped(true);
       setPhase('reviewed');
     } else {
+      setErrorCode(res.error.code ?? null);
       setError(res.error.message);
       setPhase('answering');
     }
   };
 
+  const handleRetry = () => {
+    setError(null);
+    setErrorCode(null);
+
+    if (errorCode === "evaluation_failed") {
+      handleSubmit();
+    } else {
+      loadCards();
+    }
+  };
+
   const handleNext = () => {
     if (!evaluation || !cards[currentIndex]) return;
-    
+
     const newResults = [...results, { flashcard: cards[currentIndex]!, evaluation }];
     setResults(newResults);
-    
+
     if (currentIndex < cards.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setUserAnswer("");
       setEvaluation(null);
-      setIsFlipped(false);
       setPhase('answering');
     } else {
       finishSession(newResults);
@@ -98,7 +114,7 @@ export function StudySession() {
       if (ev.verdict === 'correct') correct++;
       else if (ev.verdict === 'partial') partial++;
       else incorrect++;
-      
+
       totalScore += ev.score;
       if (ev.keyMissed) {
         ev.keyMissed.forEach(m => weakSpotsSet.add(m));
@@ -115,7 +131,7 @@ export function StudySession() {
       partial,
       incorrect,
       averageScore,
-      weakSpots: Array.from(weakSpotsSet).slice(0, 5), // Top 5
+      weakSpots: Array.from(weakSpotsSet).slice(0, 5),
       durationSeconds,
     };
 
@@ -132,8 +148,8 @@ export function StudySession() {
             </>
           ) : error}
         </div>
-        {isNotReady && (
-          <button className="btn-primary" onClick={loadCards} style={{ marginBottom: '0.75rem' }}>Try again</button>
+        {(isNotReady || errorCode === "generation_failed" || errorCode === "evaluation_failed") && (
+          <button className="btn-primary" onClick={handleRetry} style={{ marginBottom: '0.75rem' }}>Try again</button>
         )}
         <button className="btn-secondary" onClick={() => navigate('/')}>Back to Dashboard</button>
       </div>
@@ -166,55 +182,52 @@ export function StudySession() {
         </div>
       </div>
 
-      <FlashCard 
-        question={card.question} 
-        cardNumber={currentIndex + 1} 
-        totalCards={cards.length} 
-        difficulty={card.difficulty} 
-        isFlipped={isFlipped}
-      >
-        {evaluation && (
-          <div className="evaluation-card">
-            <div className="eval-header">
-              <span className={`verdict-badge verdict-${evaluation.verdict}`}>
-                {evaluation.verdict === 'correct' && '✓ Correct'}
-                {evaluation.verdict === 'partial' && '~ Partial'}
-                {evaluation.verdict === 'incorrect' && '✗ Incorrect'}
-              </span>
-              <span className="score-display">{evaluation.score}%</span>
-            </div>
-            
-            <div className="eval-body">
-              <div className="eval-section">
-                <h4>Expected Answer</h4>
-                <p>{card.expectedAnswer}</p>
-              </div>
-              <div className="eval-section">
-                <h4>AI Feedback</h4>
-                <p className="explanation-text">{evaluation.explanation}</p>
-              </div>
-              
-              {evaluation.keyMissed && evaluation.keyMissed.length > 0 && (
-                <div className="eval-section">
-                  <h4>Key Points Missed</h4>
-                  <ul className="missed-points">
-                    {evaluation.keyMissed.map((point, idx) => (
-                      <li key={idx}>{point}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+      <FlashCard
+        question={card.question}
+        cardNumber={currentIndex + 1}
+        totalCards={cards.length}
+        difficulty={card.difficulty}
+      />
 
-            <button className="btn-primary" style={{ marginTop: 'auto' }} onClick={handleNext}>
-              {currentIndex < cards.length - 1 ? 'Next Card' : 'Finish Session'}
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-            </button>
+      {phase === 'reviewed' && evaluation ? (
+        <div className="evaluation-card">
+          <div className="eval-header">
+            <span className={`verdict-badge verdict-${evaluation.verdict}`}>
+              {evaluation.verdict === 'correct' && '✓ Correct'}
+              {evaluation.verdict === 'partial' && '~ Partial'}
+              {evaluation.verdict === 'incorrect' && '✗ Incorrect'}
+            </span>
+            <span className="score-display">{evaluation.score}%</span>
           </div>
-        )}
-      </FlashCard>
 
-      {!isFlipped && (
+          <div className="eval-body">
+            <div className="eval-section">
+              <h4>Expected Answer</h4>
+              <p>{card.expectedAnswer}</p>
+            </div>
+            <div className="eval-section">
+              <h4>AI Feedback</h4>
+              <p className="explanation-text">{evaluation.explanation}</p>
+            </div>
+
+            {evaluation.keyMissed && evaluation.keyMissed.length > 0 && (
+              <div className="eval-section">
+                <h4>Key Points Missed</h4>
+                <ul className="missed-points">
+                  {evaluation.keyMissed.map((point, idx) => (
+                    <li key={idx}>{point}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <button className="btn-primary" style={{ marginTop: 'auto' }} onClick={handleNext}>
+            {currentIndex < cards.length - 1 ? 'Next Card' : 'Finish Session'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </button>
+        </div>
+      ) : (
         <div className="answer-section slide-up">
           <h3 style={{ margin: 0, fontSize: '1rem' }}>Your Answer</h3>
           <div className="answer-input-wrapper">
@@ -227,10 +240,10 @@ export function StudySession() {
             />
             <VoiceInput onTranscript={handleTranscript} disabled={phase === 'evaluating'} />
           </div>
-          
-          <button 
-            className="btn-primary" 
-            onClick={handleSubmit} 
+
+          <button
+            className="btn-primary"
+            onClick={handleSubmit}
             disabled={!userAnswer.trim() || phase === 'evaluating'}
           >
             {phase === 'evaluating' ? 'Evaluating...' : 'Submit Answer'}
