@@ -35,6 +35,28 @@ export default {
       return withCors(await routeFlashcardEvaluation(request, env), env);
     }
 
+    if (url.pathname === "/test-ai") {
+      try {
+        const embedding = await env.AI.run("@cf/baai/bge-base-en-v1.5", {
+          text: ["test"],
+        });
+        const llm = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+          messages: [{ role: "user", content: "Return JSON {ok:true}" }],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              type: "object",
+              properties: { ok: { type: "boolean" } },
+              required: ["ok"],
+            },
+          },
+        });
+        return withCors(Response.json({ ok: true, embeddingShape: (embedding as any).shape, llm }), env);
+      } catch (error: any) {
+        return withCors(Response.json({ ok: false, error: error.message, stack: error.stack }), env);
+      }
+    }
+
     return withCors(
       Response.json(
         {

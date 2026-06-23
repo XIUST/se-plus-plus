@@ -41,7 +41,7 @@ Expected format:
   const userPrompt = `Study Material:\n${contextText}\n\nGenerate ${count} flashcards inside a "cards" JSON array.`;
 
   async function attempt(temperature: number): Promise<Flashcard[] | undefined> {
-    const response = (await ai.run("@cf/meta/llama-3.1-8b-instruct", {
+    const response = (await ai.run("@cf/meta/llama-3.1-8b-instruct-fast", {
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
