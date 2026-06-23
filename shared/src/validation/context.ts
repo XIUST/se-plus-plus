@@ -1,6 +1,6 @@
 import type { ContextIngestionRequest, StudySourceKind } from "../types/context";
 
-const studySourceKinds = new Set<StudySourceKind>(["topic", "text", "markdown"]);
+const studySourceKinds = new Set<StudySourceKind>(["text", "markdown"]);
 
 export type ValidationResult<T> =
   | { ok: true; value: T }
@@ -26,7 +26,7 @@ export function validateContextIngestionRequest(value: unknown): ValidationResul
   }
 
   if (!kind || !studySourceKinds.has(kind as StudySourceKind)) {
-    errors.push("Kind must be one of: topic, text, markdown.");
+    errors.push("Kind must be one of: text, markdown.");
   }
 
   if (!content || content.length < 20) {

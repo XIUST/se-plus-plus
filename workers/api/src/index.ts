@@ -54,7 +54,7 @@ export default {
 function withCors(response: Response, env: Env): Response {
   const headers = new Headers(response.headers);
   headers.set("Access-Control-Allow-Origin", env.ALLOWED_ORIGIN ?? "*");
-  headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  headers.set("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type");
   headers.set("Vary", "Origin");
 

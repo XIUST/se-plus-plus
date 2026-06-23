@@ -68,14 +68,23 @@ export async function deleteContextVectors(
   // Use a unit vector to avoid divide-by-zero in cosine similarity
   const dummyEmbedding = new Array(768).fill(0);
   dummyEmbedding[0] = 1;
-  const queryResult = await vectorize.query(dummyEmbedding, { topK: 100, filter: { topic }, returnMetadata: 'none' });
 
-  const idsToDelete = queryResult.matches.map((match) => match.id);
+  let deletedCount = 0;
+  while (true) {
+    const queryResult = await vectorize.query(dummyEmbedding, {
+      topK: 100,
+      filter: { topic },
+      returnMetadata: 'none',
+    });
 
-  if (idsToDelete.length === 0) {
-    return { deletedCount: 0 };
+    const idsToDelete = queryResult.matches.map((match) => match.id);
+    if (idsToDelete.length === 0) {
+      break;
+    }
+
+    await vectorize.deleteByIds(idsToDelete);
+    deletedCount += idsToDelete.length;
   }
 
-  await vectorize.deleteByIds(idsToDelete);
-  return { deletedCount: idsToDelete.length };
+  return { deletedCount };
 }

@@ -1,6 +1,6 @@
 # Context Ingestion Feature
 
-Purpose: UI workflow for submitting study notes, topics, and markdown to the RAG ingestion API.
+Purpose: UI workflow for submitting plain text or file-based study notes to the RAG ingestion API.
 
 Exports:
 - `ContextIngestionPanel` React component.

@@ -3,16 +3,20 @@ import { Link } from "react-router-dom";
 import type { ContextIngestionResult, StudySourceKind } from "@se-plus/shared";
 import { ingestContext } from "../../shared/api/client";
 
+type SourceMode = "text" | "file";
+
 export function ContextIngestionPanel() {
   const [topic, setTopic] = useState("");
   const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<StudySourceKind>("markdown");
+  const [sourceMode, setSourceMode] = useState<SourceMode>("text");
   const [content, setContent] = useState("");
-  
-  type Status = 
-    | { type: "idle" } 
-    | { type: "loading" } 
-    | { type: "success"; data: ContextIngestionResult } 
+  const [fileKind, setFileKind] = useState<StudySourceKind | null>(null);
+  const [fileName, setFileName] = useState("");
+
+  type Status =
+    | { type: "idle" }
+    | { type: "loading" }
+    | { type: "success"; data: ContextIngestionResult }
     | { type: "error"; message: string };
 
   const [status, setStatus] = useState<Status>({ type: "idle" });
@@ -21,11 +25,24 @@ export function ContextIngestionPanel() {
 
   const isValid = topic.trim().length > 0 && content.trim().length >= 20;
 
+  const resetMode = (mode: SourceMode) => {
+    setSourceMode(mode);
+    setContent("");
+    setFileKind(null);
+    setFileName("");
+    setIsDragOver(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
 
     setStatus({ type: "loading" });
+
+    const kind: StudySourceKind = sourceMode === "file" ? (fileKind ?? "text") : "text";
 
     const response = await ingestContext({
       topic: topic.trim(),
@@ -38,7 +55,7 @@ export function ContextIngestionPanel() {
       setStatus({ type: "success", data: response.data });
       setTopic("");
       setTitle("");
-      setContent("");
+      resetMode("text");
     } else {
       setStatus({ type: "error", message: response.error.message });
     }
@@ -46,17 +63,18 @@ export function ContextIngestionPanel() {
 
   const handleFileSelect = (file: File) => {
     if (!file) return;
-    
+
     if (!title) {
       setTitle(file.name);
     }
-    
+
     const ext = file.name.split('.').pop()?.toLowerCase();
-    if (ext === 'md' || ext === 'markdown') {
-      setKind("markdown");
+    if (ext === "md" || ext === "markdown") {
+      setFileKind("markdown");
     } else {
-      setKind("text");
+      setFileKind("text");
     }
+    setFileName(file.name);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -87,7 +105,7 @@ export function ContextIngestionPanel() {
     <div className="ingestion-page">
       <div className="ingestion-card">
         <h2 style={{ marginBottom: '2rem' }}>Ingest Study Material</h2>
-        
+
         {status.type === "error" && (
           <div className="notice error">{status.message}</div>
         )}
@@ -107,7 +125,7 @@ export function ContextIngestionPanel() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: status.type === 'success' ? 'none' : 'block' }}>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
               <label className="form-label" htmlFor="topic">Topic (Required)</label>
@@ -124,17 +142,16 @@ export function ContextIngestionPanel() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="kind">Format</label>
+              <label className="form-label" htmlFor="sourceMode">Input Source</label>
               <select
-                id="kind"
+                id="sourceMode"
                 className="form-select"
-                value={kind}
-                onChange={(e) => setKind(e.target.value as StudySourceKind)}
+                value={sourceMode}
+                onChange={(e) => resetMode(e.target.value as SourceMode)}
                 disabled={status.type === "loading"}
               >
-                <option value="markdown">Markdown</option>
                 <option value="text">Plain Text</option>
-                <option value="topic">Topic Outline</option>
+                <option value="file">File</option>
               </select>
             </div>
           </div>
@@ -153,41 +170,48 @@ export function ContextIngestionPanel() {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Upload File</label>
-            <div 
-              className={`file-drop-zone ${isDragOver ? 'dragover' : ''}`}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-              <p style={{ margin: 0 }}>Drag and drop a .txt or .md file here, or click to browse</p>
-              <input 
-                type="file" 
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                accept=".txt,.md,.markdown"
-                onChange={(e) => {
-                  if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);
-                }}
-              />
+          {sourceMode === "file" && (
+            <div className="form-group">
+              <label className="form-label">Upload File</label>
+              <div
+                className={`file-drop-zone ${isDragOver ? 'dragover' : ''}`}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <p style={{ margin: 0 }}>Drag and drop a .txt or .md file here, or click to browse</p>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  accept=".txt,.md,.markdown"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);
+                  }}
+                />
+              </div>
+              {fileName && (
+                <span className="char-count">Loaded: {fileName}</span>
+              )}
             </div>
-          </div>
+          )}
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="content">Study Material</label>
-            <textarea
-              id="content"
-              className="form-textarea"
-              placeholder="Paste your study notes here..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              disabled={status.type === "loading"}
-            />
-            <span className="char-count">{content.length} characters (min 20)</span>
-          </div>
+          {sourceMode === "text" && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="content">Study Material</label>
+              <textarea
+                id="content"
+                className="form-textarea"
+                placeholder="Paste your study notes here..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                disabled={status.type === "loading"}
+              />
+              <span className="char-count">{content.length} characters (min 20)</span>
+            </div>
+          )}
 
           {status.type === "loading" && (
             <div className="ingestion-progress">
