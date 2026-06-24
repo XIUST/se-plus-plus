@@ -31,13 +31,15 @@ export async function generateFlashcardsFromContext(
 
   const systemPrompt = `You are an expert study assistant. Generate exactly ${count} flashcard questions and answers based ONLY on the provided study material.
 
+The topic and study material may be in any language. Detect the language of the topic and study material, and generate ALL flashcard questions and answers in that same language. Do not mix languages.
+
 You must return a single valid JSON object and nothing else. Do not include markdown code fences, explanations, or any other text. Begin the response with '{' and end with '}'.
 
 Expected format:
 ${jsonFormatExample}`;
 
   const contextText = contextChunks.map((c, i) => `[Chunk ${i + 1}]\n${c.content}`).join("\n\n");
-  const userPrompt = `Study Material:\n${contextText}\n\nGenerate ${count} flashcards inside a "cards" JSON array.`;
+  const userPrompt = `Topic: ${topic}\n\nStudy Material:\n${contextText}\n\nGenerate ${count} flashcards inside a "cards" JSON array in the same language as the topic and study material.`;
 
   async function attempt(temperature: number, useJsonSchema: boolean): Promise<Flashcard[] | undefined> {
     const options: Record<string, unknown> = {

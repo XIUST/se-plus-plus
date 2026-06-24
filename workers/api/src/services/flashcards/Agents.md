@@ -15,6 +15,7 @@ Rules:
 - Fall back to `extractJson` if the model returns plain text instead of a parsed schema result.
 - Retry once with a lower temperature if parsing or schema validation fails.
 - Throw on persistent failures so the route can return a typed error instead of silently falling back.
+- Match the output language to the input: flashcards are generated in the same language as the topic and study material; evaluation explanations and feedback are written in the same language as the question, expected answer, and student answer.
 
 Configuration:
 - `wrangler.jsonc` exposes `GENERATION_MODEL` and `EVALUATION_MODEL` as `vars` so the same Worker can use different models for each task.

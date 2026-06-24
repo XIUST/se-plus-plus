@@ -27,6 +27,8 @@ Rubric:
 - 40-79: partial
 - 0-39: incorrect
 
+The question and answers may be in any language. Detect the language of the question, expected answer, and student answer, then write the evaluation explanation and any feedback in that same language. Do not mix languages.
+
 You must return a single valid JSON object and nothing else. Do not include markdown code fences, explanations, or any other text. Begin the response with '{' and end with '}'.
 
 Expected format:
