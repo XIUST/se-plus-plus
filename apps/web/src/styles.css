@@ -81,11 +81,42 @@ button {
   height: 100vh;
   padding: 2rem;
   margin-left: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
 }
 
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
+  flex: 1;
+}
+
+/* Footer */
+.app-footer {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  padding-bottom: 1rem;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.app-footer-text {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.app-footer-link {
+  color: var(--text-secondary);
+  transition: color var(--transition-speed) ease;
+}
+
+.app-footer-link:hover {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* Sidebar */

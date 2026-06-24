@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/layout/Sidebar";
+import { Footer } from "./components/layout/Footer";
 import { Dashboard } from "./features/dashboard/Dashboard";
 import { ContextIngestionPanel } from "./features/context-ingestion/ContextIngestionPanel";
 import { StudySession } from "./features/study-session/StudySession";
@@ -18,6 +19,7 @@ export function App() {
             <Route path="/results" element={<SessionResults />} />
           </Routes>
         </div>
+        <Footer />
       </main>
     </div>
   );
