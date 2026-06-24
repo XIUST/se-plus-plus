@@ -114,7 +114,10 @@ export async function queryContextVectors(
   topic: string,
   topK: number = 5,
 ): Promise<{ id: string; content: string; score: number }[]> {
-  const queryResult = await vectorize.query(queryEmbedding, { topK, filter: { topic }, returnMetadata: 'all' });
+  
+  const safeTopic = topic.trim().toLowerCase();
+  
+  const queryResult = await vectorize.query(queryEmbedding, { topK, filter: { topic: safeTopic }, returnMetadata: 'all' });
   const results: { id: string; content: string; score: number }[] = [];
 
   for (const match of queryResult.matches) {

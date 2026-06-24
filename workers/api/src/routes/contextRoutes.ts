@@ -44,6 +44,8 @@ export async function routeContextRequest(
     );
   }
 
+  validation.value.topic = validation.value.topic.trim().toLowerCase();
+
   const chunks = chunkStudySource(validation.value);
   const sourceId = chunks[0]?.sourceId ?? crypto.randomUUID();
   const embeddings = await createEmbeddings(env.AI, chunks.map((chunk) => chunk.content));

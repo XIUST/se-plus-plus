@@ -26,13 +26,14 @@ export async function routeFlashcardGeneration(
       }, 400);
     }
 
-    const embeddings = await createEmbeddings(env.AI, [body.topic]);
+    const safeTopic = body.topic.trim().toLowerCase();
+
+    const embeddings = await createEmbeddings(env.AI, [safeTopic]);
     if (embeddings.length === 0) {
       throw new Error("Failed to generate embedding for topic");
     }
 
-    const chunks = await queryContextVectors(env.VECTORIZE, embeddings[0]!, body.topic, 10);
-    console.log("DEBUG:", chunks);
+    const chunks = await queryContextVectors(env.VECTORIZE, embeddings[0]!, safeTopic, 10);
     if (chunks.length === 0) {
       return json<ApiResponse<never>>({
         ok: false,
@@ -44,7 +45,7 @@ export async function routeFlashcardGeneration(
       env.AI,
       env.GENERATION_MODEL ?? "@cf/google/gemma-4-26b-a4b-it",
       chunks,
-      body.topic,
+      safeTopic,
       count,
     );
 
@@ -77,7 +78,8 @@ export async function routeFlashcardEvaluation(
       throw new Error("Failed to generate embedding for question");
     }
 
-    const chunks = await queryContextVectors(env.VECTORIZE, embeddings[0]!, body.topic, 5);
+    const safeTopic = body.topic.trim().toLowerCase();
+    const chunks = await queryContextVectors(env.VECTORIZE, embeddings[0]!, safeTopic, 5);
 
     const evaluation = await evaluateAnswer(
       env.AI,
