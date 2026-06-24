@@ -19,12 +19,6 @@ export function TopicCard({ topic, onStudy, onDelete }: TopicCardProps) {
     }
   };
 
-  const formattedDate = new Date(topic.lastIngestedAt).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
-
   return (
     <div className="topic-card">
       <div className="topic-card-header">
@@ -48,7 +42,6 @@ export function TopicCard({ topic, onStudy, onDelete }: TopicCardProps) {
       
       <div className="topic-card-meta">
         <span>{topic.chunkCount} chunks</span>
-        <span>Last updated: {formattedDate}</span>
       </div>
       
       <div className="topic-card-actions">

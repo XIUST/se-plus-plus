@@ -24,6 +24,11 @@ export type ContextIngestionResult = {
   title: string;
   chunkCount: number;
   vectorMutationId?: string;
+  /**
+   * True when the vectors were accepted by the index but are not yet
+   * queryable. The route will finish preparing them in the background.
+   */
+  indexing?: boolean;
 };
 
 /** Summary of a single ingested topic for the dashboard. */

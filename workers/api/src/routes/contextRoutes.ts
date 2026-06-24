@@ -3,8 +3,11 @@ import { validateContextIngestionRequest } from "@se-plus/shared";
 import type { Env } from "../env";
 import { createEmbeddings } from "../services/embeddings/embeddings";
 import { chunkStudySource } from "../services/ingestion/chunkText";
-import { insertContextVectors } from "../services/rag/vectorStore";
-import { recordTopicIngestion } from "../services/topics/topicCatalog";
+import { insertContextVectors, waitForContextVectorsReady } from "../services/rag/vectorStore";
+import { markTopicReady, recordTopicIngestion } from "../services/topics/topicCatalog";
+
+const FOREGROUND_READINESS_TIMEOUT_MS = 20_000;
+const BACKGROUND_READINESS_TIMEOUT_MS = 120_000;
 
 export async function routeContextRequest(
   request: Request,
@@ -42,24 +45,64 @@ export async function routeContextRequest(
   }
 
   const chunks = chunkStudySource(validation.value);
+  const sourceId = chunks[0]?.sourceId ?? crypto.randomUUID();
   const embeddings = await createEmbeddings(env.AI, chunks.map((chunk) => chunk.content));
   const vectorMutation = await insertContextVectors(env.VECTORIZE, chunks, embeddings);
 
-  const result: ContextIngestionResult = {
-    sourceId: chunks[0]?.sourceId ?? crypto.randomUUID(),
-    topic: validation.value.topic,
-    title: validation.value.title ?? validation.value.topic,
-    chunkCount: chunks.length,
-    ...(vectorMutation.mutationId ? { vectorMutationId: vectorMutation.mutationId } : {}),
-  };
+  let indexing = true;
 
   try {
-    await recordTopicIngestion(env.TOPICS_KV, result.topic, result.sourceId, result.chunkCount);
+    await recordTopicIngestion(env.TOPICS_KV, validation.value.topic, sourceId, chunks.length);
   } catch (error) {
     console.error("Failed to update topic catalog", error);
   }
 
-  return json<ApiResponse<ContextIngestionResult>>({ ok: true, data: result }, 201);
+  const readiness = await waitForContextVectorsReady(
+    env.VECTORIZE,
+    chunks,
+    FOREGROUND_READINESS_TIMEOUT_MS,
+  );
+
+  if (readiness.ready) {
+    indexing = false;
+    try {
+      await markTopicReady(env.TOPICS_KV, validation.value.topic);
+    } catch (error) {
+      console.error("Failed to mark topic as ready", error);
+    }
+  } else {
+    ctx.waitUntil(
+      waitForContextVectorsReady(env.VECTORIZE, chunks, BACKGROUND_READINESS_TIMEOUT_MS)
+        .then(async (backgroundReadiness) => {
+          if (backgroundReadiness.ready) {
+            await markTopicReady(env.TOPICS_KV, validation.value.topic);
+          } else {
+            console.error("Vectors never became searchable within background timeout", {
+              sourceId,
+              topic: validation.value.topic,
+              checks: backgroundReadiness.checkedCount,
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Background vector readiness check failed", error);
+        }),
+    );
+  }
+
+  const result: ContextIngestionResult = {
+    sourceId,
+    topic: validation.value.topic,
+    title: validation.value.title ?? validation.value.topic,
+    chunkCount: chunks.length,
+    ...(vectorMutation.mutationId ? { vectorMutationId: vectorMutation.mutationId } : {}),
+    ...(indexing ? { indexing: true } : {}),
+  };
+
+  return json<ApiResponse<ContextIngestionResult>>(
+    { ok: true, data: result },
+    indexing ? 202 : 201,
+  );
 }
 
 async function readJson(request: Request): Promise<unknown> {

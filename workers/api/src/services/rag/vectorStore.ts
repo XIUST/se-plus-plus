@@ -33,6 +33,72 @@ export async function insertContextVectors(
   return mutationId ? { mutationId } : {};
 }
 
+export type VectorReadinessResult = {
+  ready: boolean;
+  checkedCount: number;
+};
+
+/**
+ * Poll Vectorize until all chunks for a source are queryable.
+ *
+ * Vectorize inserts are accepted synchronously but applied asynchronously.
+ * This helper uses a dummy embedding with a metadata filter on `sourceId` so
+ * it does not need a semantic query embedding.
+ */
+export async function waitForContextVectorsReady(
+  vectorize: Vectorize,
+  chunks: IngestedChunk[],
+  maxWaitMs: number,
+  pollIntervalMs: number = 1_000,
+): Promise<VectorReadinessResult> {
+  if (chunks.length === 0) {
+    return { ready: true, checkedCount: 0 };
+  }
+
+  const sourceId = chunks[0]?.sourceId;
+  if (!sourceId) {
+    return { ready: true, checkedCount: 0 };
+  }
+
+  const pending = new Set(chunks.map((chunk) => chunk.id));
+  // Use a unit vector to avoid divide-by-zero in cosine similarity.
+  const dummyEmbedding = new Array(768).fill(0);
+  dummyEmbedding[0] = 1;
+
+  const startTime = Date.now();
+  let checkedCount = 0;
+
+  while (pending.size > 0) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed >= maxWaitMs) {
+      break;
+    }
+
+    const result = await vectorize.query(dummyEmbedding, {
+      topK: chunks.length,
+      filter: { sourceId },
+      returnMetadata: "none",
+    });
+    checkedCount++;
+
+    for (const match of result.matches) {
+      pending.delete(match.id);
+    }
+
+    if (pending.size === 0) {
+      break;
+    }
+
+    const remainingMs = maxWaitMs - (Date.now() - startTime);
+    const waitMs = Math.min(pollIntervalMs, remainingMs);
+    if (waitMs > 0) {
+      await sleep(waitMs);
+    }
+  }
+
+  return { ready: pending.size === 0, checkedCount };
+}
+
 function readMutationId(value: unknown): string | undefined {
   if (typeof value !== "object" || value === null) {
     return undefined;
@@ -102,4 +168,8 @@ export async function deleteContextVectors(
     deletedCount,
     ...(mutationId ? { mutationId } : {}),
   };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

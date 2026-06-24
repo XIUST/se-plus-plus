@@ -8,6 +8,8 @@ type TopicCatalogEntry = {
   topic: string;
   sourceIds: string[];
   chunkCount: number;
+  /** True while the topic's latest vectors are still being made searchable. */
+  indexing?: boolean;
   lastIngestedAt: string;
 };
 
@@ -40,7 +42,21 @@ export async function recordTopicIngestion(
     topic,
     sourceIds: Array.from(sourceIds),
     chunkCount: (existing?.chunkCount ?? 0) + chunkCount,
+    indexing: true,
     lastIngestedAt: new Date().toISOString(),
+  };
+
+  await writeCatalog(kv, catalog);
+}
+
+export async function markTopicReady(kv: KVNamespace, topic: string): Promise<void> {
+  const catalog = await readCatalog(kv);
+  const existing = catalog[topic];
+  if (!existing) return;
+
+  catalog[topic] = {
+    ...existing,
+    indexing: false,
   };
 
   await writeCatalog(kv, catalog);

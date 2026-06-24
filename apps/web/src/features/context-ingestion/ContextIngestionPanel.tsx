@@ -119,7 +119,9 @@ export function ContextIngestionPanel() {
             <p><strong>Topic:</strong> {status.data.topic}</p>
             <p><strong>Chunks generated:</strong> {status.data.chunkCount}</p>
             <p className="notice info" style={{ marginTop: '1.25rem' }}>
-              Your notes are being indexed and will be ready to study in a few moments. If the topic does not appear on the Dashboard right away, please wait up to a minute.
+              {status.data.indexing
+                ? "Your notes are being indexed and will be ready to study in a few moments. If the topic does not appear on the Dashboard right away, please wait up to a minute."
+                : "Your notes are indexed and ready to study. The topic is now available on the Dashboard."}
             </p>
             <div style={{ marginTop: '1.5rem' }}>
               <Link to="/" className="btn-primary">Return to Dashboard</Link>
