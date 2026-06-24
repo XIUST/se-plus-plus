@@ -7,7 +7,6 @@ export async function createEmbeddings(ai: Ai, texts: string[]): Promise<number[
     return [];
   }
 
-  // Передаем только текст
   const response = (await ai.run(embeddingModel, {
     text: texts,
   })) as EmbeddingResponse;

@@ -25,5 +25,20 @@
 		"ALLOWED_ORIGIN": "https://se-plus-plus.pages.dev",
 		"GENERATION_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"EVALUATION_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
-	}
+	},
+	"observability": {
+		"enabled": false,
+		"head_sampling_rate": 1,
+		"logs": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+		"persist": true,
+		"invocation_logs": true
+		},
+		"traces": {
+		"enabled": false,
+		"persist": true,
+		"head_sampling_rate": 1
+		}
+  }
 }

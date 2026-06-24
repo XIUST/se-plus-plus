@@ -62,7 +62,7 @@ export async function waitForContextVectorsReady(
 
   const pending = new Set(chunks.map((chunk) => chunk.id));
   // Use a unit vector to avoid divide-by-zero in cosine similarity.
-  const dummyEmbedding = new Array(768).fill(0);
+  const dummyEmbedding = new Array(1024).fill(0);
   dummyEmbedding[0] = 1;
 
   const startTime = Date.now();
@@ -135,7 +135,7 @@ export async function deleteContextVectors(
   topic: string,
 ): Promise<{ deletedCount: number; mutationId?: string }> {
   // Use a unit vector to avoid divide-by-zero in cosine similarity
-  const dummyEmbedding = new Array(768).fill(0);
+  const dummyEmbedding = new Array(1024).fill(0);
   dummyEmbedding[0] = 1;
 
   let deletedCount = 0;
