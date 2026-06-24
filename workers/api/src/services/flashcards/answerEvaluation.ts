@@ -27,7 +27,7 @@ Rubric:
 - 40-79: partial
 - 0-39: incorrect
 
-Return a single valid JSON object and nothing else. Do not include markdown formatting, explanations, or trailing text.
+You must return a single valid JSON object and nothing else. Do not include markdown code fences, explanations, or any other text. Begin the response with '{' and end with '}'.
 
 Expected format:
 { "verdict": "correct", "score": 85, "explanation": "The answer covers the key points accurately.", "keyMissed": [] }`;
@@ -36,21 +36,31 @@ Expected format:
 
   const userPrompt = `Source Material:\n${contextText}\n\nQuestion: ${question}\nExpected Answer: ${expectedAnswer}\n\nStudent Answer: ${userAnswer}\n\nEvaluate the student answer and return JSON only.`;
 
-  async function attempt(temperature: number): Promise<AnswerEvaluationResult | undefined> {
-    const response = (await ai.run(modelName, {
+  async function attempt(temperature: number, useJsonSchema: boolean): Promise<AnswerEvaluationResult | undefined> {
+    const options: Record<string, unknown> = {
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       temperature,
       max_tokens: 1024,
-      response_format: {
+    };
+
+    if (useJsonSchema) {
+      options.response_format = {
         type: "json_schema",
         json_schema: EVALUATION_JSON_SCHEMA,
-      },
-    })) as { response: unknown };
+      };
+    }
 
-    const output = response.response;
+    let output: unknown;
+    try {
+      const response = (await ai.run(modelName, options)) as { response: unknown };
+      output = response.response;
+    } catch (error: any) {
+      console.error(`Answer evaluation failed with ${useJsonSchema ? "JSON schema" : "plain prompt"}.`, error?.message ?? error);
+      return undefined;
+    }
 
     let parsed: Record<string, unknown> | undefined;
     if (isObject(output)) {
@@ -83,12 +93,12 @@ Expected format:
     };
   }
 
-  const firstAttempt = await attempt(0.1);
+  const firstAttempt = await attempt(0.1, true);
   if (firstAttempt !== undefined) {
     return firstAttempt;
   }
 
-  const retryAttempt = await attempt(0.1);
+  const retryAttempt = await attempt(0.1, false);
   if (retryAttempt !== undefined) {
     return retryAttempt;
   }

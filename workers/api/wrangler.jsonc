@@ -23,7 +23,7 @@
 	],
 	"vars": {
 		"ALLOWED_ORIGIN": "https://se-plus-plus.pages.dev",
-		"GENERATION_MODEL": "@cf/google/gemma-4-26b-a4b-it",
-		"EVALUATION_MODEL": "@cf/google/gemma-4-26b-a4b-it"
+		"GENERATION_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+		"EVALUATION_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 	}
 }
