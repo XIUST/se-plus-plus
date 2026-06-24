@@ -32,6 +32,7 @@ export async function routeFlashcardGeneration(
     }
 
     const chunks = await queryContextVectors(env.VECTORIZE, embeddings[0]!, body.topic, 10);
+    console.log("DEBUG:", chunks);
     if (chunks.length === 0) {
       return json<ApiResponse<never>>({
         ok: false,
