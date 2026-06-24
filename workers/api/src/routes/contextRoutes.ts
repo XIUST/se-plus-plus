@@ -44,7 +44,7 @@ export async function routeContextRequest(
     );
   }
 
-  validation.value.topic = validation.value.topic.trim().toLowerCase();
+  validation.value.topic = validation.value.topic.trim().toUpperCase();
 
   const chunks = chunkStudySource(validation.value);
   const sourceId = chunks[0]?.sourceId ?? crypto.randomUUID();
