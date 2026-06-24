@@ -22,6 +22,7 @@ const FLASHCARDS_JSON_SCHEMA = {
 
 export async function generateFlashcardsFromContext(
   ai: Ai,
+  modelName: string,
   contextChunks: { content: string; id: string }[],
   topic: string,
   count: number,
@@ -41,7 +42,7 @@ Expected format:
   const userPrompt = `Study Material:\n${contextText}\n\nGenerate ${count} flashcards inside a "cards" JSON array.`;
 
   async function attempt(temperature: number): Promise<Flashcard[] | undefined> {
-    const response = (await ai.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+    const response = (await ai.run(modelName, {
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

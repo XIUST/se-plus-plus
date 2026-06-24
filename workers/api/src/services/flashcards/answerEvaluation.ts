@@ -14,6 +14,7 @@ const EVALUATION_JSON_SCHEMA = {
 
 export async function evaluateAnswer(
   ai: Ai,
+  modelName: string,
   question: string,
   expectedAnswer: string,
   userAnswer: string,
@@ -36,7 +37,7 @@ Expected format:
   const userPrompt = `Source Material:\n${contextText}\n\nQuestion: ${question}\nExpected Answer: ${expectedAnswer}\n\nStudent Answer: ${userAnswer}\n\nEvaluate the student answer and return JSON only.`;
 
   async function attempt(temperature: number): Promise<AnswerEvaluationResult | undefined> {
-    const response = (await ai.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+    const response = (await ai.run(modelName, {
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

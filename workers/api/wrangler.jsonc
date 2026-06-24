@@ -22,6 +22,8 @@
 		}
 	],
 	"vars": {
-		"ALLOWED_ORIGIN": "https://se-plus-plus.pages.dev"
+		"ALLOWED_ORIGIN": "https://se-plus-plus.pages.dev",
+		"GENERATION_MODEL": "@cf/google/gemma-4-26b-a4b-it",
+		"EVALUATION_MODEL": "@cf/google/gemma-4-26b-a4b-it"
 	}
 }

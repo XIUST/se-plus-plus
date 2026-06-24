@@ -40,7 +40,7 @@ export default {
         const embedding = await env.AI.run("@cf/baai/bge-base-en-v1.5", {
           text: ["test"],
         });
-        const llm = await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
+        const llm = await env.AI.run(env.GENERATION_MODEL ?? "@cf/google/gemma-4-26b-a4b-it", {
           messages: [{ role: "user", content: "Return JSON {ok:true}" }],
           response_format: {
             type: "json_schema",

@@ -39,7 +39,13 @@ export async function routeFlashcardGeneration(
       }, 404);
     }
 
-    const flashcards = await generateFlashcardsFromContext(env.AI, chunks, body.topic, count);
+    const flashcards = await generateFlashcardsFromContext(
+      env.AI,
+      env.GENERATION_MODEL ?? "@cf/google/gemma-4-26b-a4b-it",
+      chunks,
+      body.topic,
+      count,
+    );
 
     return json<ApiResponse<GenerateFlashcardsResponse>>({ ok: true, data: { cards: flashcards } });
 
@@ -72,7 +78,14 @@ export async function routeFlashcardEvaluation(
 
     const chunks = await queryContextVectors(env.VECTORIZE, embeddings[0]!, body.topic, 5);
 
-    const evaluation = await evaluateAnswer(env.AI, body.question, body.expectedAnswer, body.userAnswer, chunks);
+    const evaluation = await evaluateAnswer(
+      env.AI,
+      env.EVALUATION_MODEL ?? "@cf/google/gemma-4-26b-a4b-it",
+      body.question,
+      body.expectedAnswer,
+      body.userAnswer,
+      chunks,
+    );
 
     return json<ApiResponse<AnswerEvaluationResult>>({ ok: true, data: evaluation });
 
