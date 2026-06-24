@@ -1,4 +1,5 @@
 import type { IngestedChunk } from "@se-plus/shared";
+import { getSafeTopic } from "../../utils/metadata";
 
 export type VectorMutationResult = {
   mutationId?: string;

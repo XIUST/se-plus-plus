@@ -4,6 +4,7 @@ import { createEmbeddings } from "../services/embeddings/embeddings";
 import { queryContextVectors } from "../services/rag/vectorStore";
 import { generateFlashcardsFromContext } from "../services/flashcards/flashcardGeneration";
 import { evaluateAnswer } from "../services/flashcards/answerEvaluation";
+import { getSafeTopic } from "../utils/metadata";
 
 export async function routeFlashcardGeneration(
   request: Request,

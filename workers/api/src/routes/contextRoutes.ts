@@ -5,6 +5,7 @@ import { createEmbeddings } from "../services/embeddings/embeddings";
 import { chunkStudySource } from "../services/ingestion/chunkText";
 import { insertContextVectors, waitForContextVectorsReady } from "../services/rag/vectorStore";
 import { markTopicReady, recordTopicIngestion } from "../services/topics/topicCatalog";
+import { getSafeTopic } from "../utils/metadata";
 
 const FOREGROUND_READINESS_TIMEOUT_MS = 20_000;
 const BACKGROUND_READINESS_TIMEOUT_MS = 120_000;

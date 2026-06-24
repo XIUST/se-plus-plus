@@ -1,4 +1,4 @@
-function getSafeTopic(topic: string): string {
+export function getSafeTopic(topic: string): string {
   let normalized = topic.trim().toUpperCase();
   
   const encoder = new TextEncoder();
