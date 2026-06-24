@@ -44,7 +44,7 @@ export async function routeContextRequest(
     );
   }
 
-  validation.value.topic = validation.value.topic.trim().toUpperCase();
+  validation.value.topic = getSafeTopic(validation.value.topic);
 
   const chunks = chunkStudySource(validation.value);
   const sourceId = chunks[0]?.sourceId ?? crypto.randomUUID();

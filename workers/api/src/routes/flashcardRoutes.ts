@@ -26,7 +26,7 @@ export async function routeFlashcardGeneration(
       }, 400);
     }
 
-    const safeTopic = body.topic.trim().toUpperCase();
+    const safeTopic = getSafeTopic(body.topic);
 
     const embeddings = await createEmbeddings(env.AI, [safeTopic]);
     if (embeddings.length === 0) {
@@ -78,7 +78,7 @@ export async function routeFlashcardEvaluation(
       throw new Error("Failed to generate embedding for question");
     }
 
-    const safeTopic = body.topic.trim().toUpperCase();
+    const safeTopic = getSafeTopic(body.topic);
     const chunks = await queryContextVectors(env.VECTORIZE, embeddings[0]!, safeTopic, 5);
 
     const evaluation = await evaluateAnswer(
